@@ -27,16 +27,21 @@ var handleMessage = function(ws, msg){
             if(json.data == "connected"){
                 ourWS = ws;
             }
-        break;
+            break;
         case "launch":
-            if(ws == ourWS){
-                console.log("Launcing rocket at " + json.date);
-            }
-        break;
+            console.log("Launcing rocket at " + json.date);
+
+            //TODO: Get launch confirmation
+            sendMessageToArduino("launch");
+
+            break;
+        case "launch_confirmed":
+            sendMessageToDashboard("launch", "confirmed");
+            break;
     }
 }
 
-var sendMessage = function(type, data){
+var sendMessageToDashboard = function(type, data){
     if(ourWS){
         var msg = {
             type: type,
@@ -60,16 +65,20 @@ port.on("open", function () {
     console.log('open');
     const parser = port.pipe(new Readline({ delimiter: '\r\n' }))
     parser.on('data', function(data){
-        //console.log(data);
         try{
-            sendMessage("altitude", data.split("Alt: ")[1].split(" Temp:")[0])
-        } catch(e){}
-
-        try{
-            sendMessage("temperature", data.split("Temp: ")[1]);
+            sendMessageToDashboard("altitude", data.split("Alt: ")[1].split(" Temp:")[0]);
+            sendMessageToDashboard("temperature", data.split("Temp: ")[1]);
         } catch(e){}
     });
 });
+
+var sendMessageToArduino = function (message) {
+    port.write(message, function(err) {
+        if(err){
+            sendMessageToDashboard("launch", "error");
+        }
+    });
+}
 
 
 
